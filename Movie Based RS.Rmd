@@ -1,0 +1,81 @@
+---
+title: "Movie Based RS"
+author: "Muthia"
+date: "8/27/2020"
+output: html_document
+---
+
+library(recommenderlab)
+library(reshape2)
+library(ggplot2)                       
+library(data.table)
+library(ggplot2)
+library(pheatmap)
+
+```{r}
+path_name <- 'C:/Users/Aulia Muthia/Downloads/Riset Mandiri/IMDB-Dataset'
+
+ratings = read.csv(paste0(path_name, '/ratings.csv'), stringsAsFactors = FALSE)
+movies = read.csv(paste0(path_name, '/movies.csv'), stringsAsFactors = FALSE)
+# create year column
+movies = movies %>% mutate(year = as.integer(str_extract(title, "([[:digit:]]{4})")))
+# limit to more recent movies
+ratings = ratings %>% 
+  left_join(movies, by = 'movieId') %>%
+  select(userId, movieId, rating,  title)
+
+ratings 
+movies
+```
+
+# Pivot Movie Title
+```{r}
+
+#filter movie within 15 years
+
+movie_ratings = 
+    ratings %>%
+    left_join(movies, by = 'movieId') %>%
+    filter(year >= 2000 & year<=2015) %>%
+    pivot_wider(names_from = title.y, values_from = rating) %>%
+    select(-movieId,-title.x,-genres,-year,-userId)
+head(movie_ratings)
+```
+
+#change to matrix
+
+```{r}
+movie_ratings_matrix <- as.matrix(movie_ratings)
+head(movie_ratings_matrix)
+```
+
+#change NA to 0
+
+```{r}
+movie_ratings_matrix[is.na(movie_ratings_matrix)] = 0
+head(movie_ratings_matrix)
+```
+
+#cor matrix
+
+```{r}
+movie_correlation_matrix <- round(cor(movie_ratings_matrix),2)
+```
+
+#melt matrix
+
+```{r}
+melt_similar_movie <- melt(movie_correlation_matrix)
+head(melt_similar_movie)
+```
+
+
+#take only 20 first user from melt matrix
+
+```{r}
+#top 20
+top_20_movie <- melt_similar_movie %>% 
+  filter(value <1.0) %>% 
+  arrange(desc(value)) %>% 
+  top_n(20)
+top_20_movie

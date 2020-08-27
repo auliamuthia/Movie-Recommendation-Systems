@@ -1,0 +1,128 @@
+---
+title: "Content Based Recommendation Systems"
+author: "Muthia"
+date: "8/27/2020"
+output: html_document
+---
+
+1. User Similarity (The User-Based Collaborative Filtering Approach) 
+
+  
+library(recommenderlab)
+library(reshape2)
+library(ggplot2)                       
+library(data.table)
+library(ggplot2)
+library(pheatmap)
+
+
+```{r}
+path_name <- 'C:/Users/Aulia Muthia/Downloads/Riset Mandiri/IMDB-Dataset'
+
+ratings = read.csv(paste0(path_name, '/ratings.csv'), stringsAsFactors = FALSE)
+movies = read.csv(paste0(path_name, '/movies.csv'), stringsAsFactors = FALSE)
+# create year column
+movies = movies %>% mutate(year = as.integer(str_extract(title, "([[:digit:]]{4})")))
+# limit to more recent movies
+ratings = ratings %>% 
+  left_join(movies, by = 'movieId') %>%
+  select(userId, movieId, rating,  title)
+
+ratings 
+movies
+```
+
+1. User Similarity
+
+# Pivot Movie Title on Userid
+```{r}
+user_ratings = ratings %>%
+    pivot_wider(names_from = userId, values_from = rating)
+head(user_ratings)
+```
+
+# Change Colnames on user_ratings table
+
+```{r}
+#subset user id only
+user_id <- user_ratings %>% select(-movieId,-title)
+head(user_id)
+
+#subset title id only
+movie_title <- user_ratings %>% select(title)
+head(movie_title)
+
+#change user id column name
+cnames <- colnames(user_id) 
+
+colnames(user_id) <- paste0("User", cnames)
+head(user_id)
+
+#merge user id column with movie id & title id
+user_ratings <- cbind(movie_title[], user_id[])
+head(user_ratings)
+str(user_ratings)
+
+#change to matrix
+user_ratings_matrix <- as.matrix(user_ratings)
+head(user_ratings_matrix)
+
+#change NA to 0
+user_ratings_matrix[is.na(user_ratings_matrix)] = 0
+head(user_ratings_matrix)
+
+#ratings only matrix 
+#change NA to 0
+ratings_only_matrix[is.na(ratings_only_matrix)] = 0
+head(ratings_only_matrix)
+```
+
+#cor matrix
+
+```{r}
+user_correlation_matrix <- round(cor(ratings_only_matrix),2)
+head(user_correlation_matrix)
+```
+
+#melt matrix
+
+```{r}
+melt_similar_user <- melt(user_correlation_matrix)
+head(melt_similar_user)
+```
+
+
+#take only 20 first user from melt matrix
+
+```{r}
+#top 20
+
+top_20_user <- melt_similar_user %>% 
+  filter(value <1.0) %>% 
+  arrange(desc(value)) %>% 
+  top_n(20)
+top_20_user
+
+#least 20
+
+least_20_user <- melt_similar_user %>% 
+  filter(value <1.0) %>% 
+  arrange(desc(value)) %>% 
+  top_n(-20)
+least_20_user
+```
+
+
+# The function geom_tile()[ggplot2 package] is used to visualize the correlation matrix :
+```{r}
+#top 20 user plot
+
+ggplot(data = top_20_user, aes(x=Var1, y=Var2, fill=value)) + 
+  geom_tile()
+
+#least 20 user plot
+ggplot(data = least_20_user, aes(x=Var1, y=Var2, fill=value)) + 
+  geom_tile()
+```
+
+
